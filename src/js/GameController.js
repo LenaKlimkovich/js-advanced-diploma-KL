@@ -35,6 +35,7 @@ export default class GameController {
     this.positions = [];
     this.selectedCharacter = null;
     this.isAttacking = false;
+    this.isLocked = false;
     this.themes = [
       themes.prairie,
       themes.desert,
@@ -207,6 +208,7 @@ export default class GameController {
 
 
   async onCellClick(index) {
+   if(this.isLocked) return;
     if (this.gameState.gameOver) {
       return;
     }
@@ -358,7 +360,7 @@ export default class GameController {
   }
 
   async onCellEnter(index) {
-
+ if(this.isLocked) return;
     if (this.gameState.gameOver) return;
 
     const positioned = this.positions.find(p => p.position === index);
@@ -412,6 +414,7 @@ export default class GameController {
 
 
   onCellLeave(index) {
+     if(this.isLocked) return;
     this.gamePlay.hideCellTooltip(index);
     this.gamePlay.deselectCell(index);
     if (this.selectedCharacter && this.selectedCharacter.position === index) {
@@ -434,10 +437,12 @@ export default class GameController {
 
     this.gameState.positions = this.positions;
     this.stateService.save(this.gameState);
+    this.isLocked = true;
     GamePlay.showMessage("Игра сохранена");
   }
 
   onLoadGameClick() {
+    this.isLocked = false;
     const saved = this.stateService.load();
 
     if (!saved) {
