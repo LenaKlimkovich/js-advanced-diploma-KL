@@ -342,8 +342,10 @@ export default class GameController {
   }
 
   restoreGame(saved) {
+  // 1. Восстанавливаем состояние
     this.gameState = GameState.from(saved);
 
+    // 2. Восстанавливаем персонажей
     this.positions = saved.positions.map(p => {
       const CharacterClass = characterClasses[p.type];
       const character = new CharacterClass(p.level);
@@ -355,23 +357,29 @@ export default class GameController {
       return new PositionedCharacter(character, p.position);
     });
 
+    // 3. Рисуем UI
+    this.gamePlay.drawUi(this.themes[this.gameState.theme]);
+
+    // 4. Рисуем персонажей
+    this.gamePlay.redrawPositions(this.positions);
+
+    // 5. Восстанавливаем выделение
     this.selectedCharacter = null;
+
     if (saved.selectedPosition !== null) {
       this.selectedCharacter = this.positions.find(
         p => p.position === saved.selectedPosition
       );
+
+      if (this.selectedCharacter) {
+        this.gamePlay.selectCell(saved.selectedPosition, "yellow");
+      }
     }
 
+    // 6. Восстанавливаем флаги
     this.isLocked = saved.isLocked;
     this.isAttacking = saved.isAttacking;
     this.gameState.currentPlayer = saved.currentPlayer;
-
-    this.gamePlay.drawUi(this.themes[this.gameState.theme]);
-    this.gamePlay.redrawPositions(this.positions);
-
-    if (this.selectedCharacter) {
-      this.gamePlay.selectCell(this.selectedCharacter.position, "yellow");
-    }
   }
 
   findClosestPlayer(enemy) {
@@ -482,15 +490,9 @@ export default class GameController {
   }
 
   onSaveGameClick() {
-    if (this.gameState.gameOver) return;
-
-    this.gameState.positions = this.positions;
-    this.stateService.save(this.gameState);
-    this.gameState.positions = this.positions;
-    this.gameState.selectedPosition = this.selectedCharacter?.position ?? null;
-    this.gameState.isLocked = this.isLocked;
-    this.gameState.isAttacking = this.isAttacking;
     this.isLocked = true;
+    if (this.gameState.gameOver) return;
+    this.stateService.save(this.gameState.toJSON());
     GamePlay.showMessage("Игра сохранена");
   }
 
@@ -503,24 +505,9 @@ export default class GameController {
       return;
     }
 
-    this.gameState = GameState.from(saved);
-
-    this.positions = saved.positions.map(p => {
-      const CharacterClass = characterClasses[p.type];
-      const character = new CharacterClass(p.level);
-
-      character.attack = p.attack;
-      character.defence = p.defence;
-      character.health = p.health;
-
-      return new PositionedCharacter(character, p.position);
-    });
-    this.gameState.positions = this.positions;
-    this.gamePlay.drawUi(this.themes[this.gameState.theme]);
-    this.gamePlay.redrawPositions(this.positions);
+    this.restoreGame(saved);
 
     GamePlay.showMessage("Игра загружена");
-
   }
-  
+
 } 
