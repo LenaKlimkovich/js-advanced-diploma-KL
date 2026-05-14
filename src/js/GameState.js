@@ -1,12 +1,14 @@
+
 export default class GameState {
   constructor() {
-    this.positions = [];
-    this.currentPlayer = "player"; 
     this.level = 1;
+    this.positions = [];
+    this.currentPlayer = "player";
+    this.selectedPosition = null;
+    this.isLocked = false;
+    this.isAttacking = false;
     this.gameOver = false;
-    this.score = 0;
-    this.maxScore = 0;
-    this.theme = "prairie"; 
+    this.theme = 0;
   }
   
   toJSON() {

@@ -69,7 +69,7 @@ export default class GameController {
       return;
     }
     const themeIndex = (this.gameState.level - 1) % this.themes.length;
-    this.gameState.theme = this.themes[themeIndex];
+    this.gameState.theme = themeIndex;
     this.gamePlay.drawUi(this.themes[themeIndex]);
 
     const playerPositions = this.positions.filter(p =>
@@ -92,43 +92,31 @@ export default class GameController {
     this.gamePlay.redrawPositions(this.positions);
     this.gameState.positions = this.positions;
     this.stateService.save(this.gameState);
+    this.gameState.positions = this.positions;
+    this.gameState.selectedPosition = this.selectedCharacter?.position ?? null;
+    this.gameState.isLocked = this.isLocked;
+    this.gameState.isAttacking = this.isAttacking;
   }
 
 
   init() {
     try {
+      console.log("theme:", this.gameState.theme);
       this.gamePlay.addNewGameListener(this.onNewGameClick.bind(this));
       this.gamePlay.addSaveGameListener(this.onSaveGameClick.bind(this));
       this.gamePlay.addLoadGameListener(this.onLoadGameClick.bind(this));
 
+
+      this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
+      this.gamePlay.addCellLeaveListener(this.onCellLeave.bind(this));
+      this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
+
       const saved = this.stateService.load();
 
       if (saved) {
-        this.gameState = GameState.from(saved);
-
-        this.positions = saved.positions.map(p => {
-          const CharacterClass = characterClasses[p.type];
-          const character = new CharacterClass(p.level);
-
-          character.attack = p.attack;
-          character.defence = p.defence;
-          character.health = p.health;
-
-          return new PositionedCharacter(character, p.position);
-        });
-
-        this.gameState.positions = this.positions;
-
-        this.gamePlay.drawUi(themes[this.gameState.theme]);
-        this.gamePlay.redrawPositions(this.positions);
-
-        this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
-        this.gamePlay.addCellLeaveListener(this.onCellLeave.bind(this));
-        this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
-
+        this.restoreGame(saved);
         return;
       }
-
       // если сохранения нет — запускаем новую игру
       this.startNewGame();
 
@@ -152,9 +140,10 @@ export default class GameController {
     this.gameState.positions = this.positions;
     this.gamePlay.redrawPositions(this.positions);
     this.stateService.save(this.gameState);
-    this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
-    this.gamePlay.addCellLeaveListener(this.onCellLeave.bind(this));
-    this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
+    this.gameState.positions = this.positions;
+    this.gameState.selectedPosition = this.selectedCharacter?.position ?? null;
+    this.gameState.isLocked = this.isLocked;
+    this.gameState.isAttacking = this.isAttacking;
   }
 
 
@@ -169,6 +158,10 @@ export default class GameController {
       this.nextLevel();
       this.gameState.positions = this.positions;
       this.stateService.save(this.gameState);
+      this.gameState.positions = this.positions;
+      this.gameState.selectedPosition = this.selectedCharacter?.position ?? null;
+      this.gameState.isLocked = this.isLocked;
+      this.gameState.isAttacking = this.isAttacking;
       return;
     }
 
@@ -186,6 +179,10 @@ export default class GameController {
         this.gameState.gameOver = true;
         this.gameState.positions = this.positions;
         this.stateService.save(this.gameState);
+        this.gameState.positions = this.positions;
+        this.gameState.selectedPosition = this.selectedCharacter?.position ?? null;
+        this.gameState.isLocked = this.isLocked;
+        this.gameState.isAttacking = this.isAttacking;
         return;
       }
       return;
@@ -204,11 +201,15 @@ export default class GameController {
 
     this.gameState.currentPlayer = "player";
     this.stateService.save(this.gameState);
+    this.gameState.positions = this.positions;
+    this.gameState.selectedPosition = this.selectedCharacter?.position ?? null;
+    this.gameState.isLocked = this.isLocked;
+    this.gameState.isAttacking = this.isAttacking;
   }
 
 
   async onCellClick(index) {
-   if(this.isLocked) return;
+    if(this.isLocked) return;
     if (this.gameState.gameOver) {
       return;
     }
@@ -222,6 +223,10 @@ export default class GameController {
 
       this.gameState.positions = this.positions;
       this.stateService.save(this.gameState);
+      this.gameState.positions = this.positions;
+      this.gameState.selectedPosition = this.selectedCharacter?.position ?? null;
+      this.gameState.isLocked = this.isLocked;
+      this.gameState.isAttacking = this.isAttacking;
       return;
     }
 
@@ -239,6 +244,10 @@ export default class GameController {
       await this.changeTurn();
       this.gameState.positions = this.positions;
       this.stateService.save(this.gameState);
+      this.gameState.positions = this.positions;
+      this.gameState.selectedPosition = this.selectedCharacter?.position ?? null;
+      this.gameState.isLocked = this.isLocked;
+      this.gameState.isAttacking = this.isAttacking;
       return;
     }
     GamePlay.showError("Недопустимый ход");
@@ -324,10 +333,46 @@ export default class GameController {
     this.gamePlay.redrawPositions(this.positions);
     this.gameState.positions = this.positions;
     this.stateService.save(this.gameState);
+    this.gameState.positions = this.positions;
+    this.gameState.selectedPosition = this.selectedCharacter?.position ?? null;
+    this.gameState.isLocked = this.isLocked;
+    this.gameState.isAttacking = this.isAttacking;
 
     return died;
   }
 
+  restoreGame(saved) {
+    this.gameState = GameState.from(saved);
+
+    this.positions = saved.positions.map(p => {
+      const CharacterClass = characterClasses[p.type];
+      const character = new CharacterClass(p.level);
+
+      character.attack = p.attack;
+      character.defence = p.defence;
+      character.health = p.health;
+
+      return new PositionedCharacter(character, p.position);
+    });
+
+    this.selectedCharacter = null;
+    if (saved.selectedPosition !== null) {
+      this.selectedCharacter = this.positions.find(
+        p => p.position === saved.selectedPosition
+      );
+    }
+
+    this.isLocked = saved.isLocked;
+    this.isAttacking = saved.isAttacking;
+    this.gameState.currentPlayer = saved.currentPlayer;
+
+    this.gamePlay.drawUi(this.themes[this.gameState.theme]);
+    this.gamePlay.redrawPositions(this.positions);
+
+    if (this.selectedCharacter) {
+      this.gamePlay.selectCell(this.selectedCharacter.position, "yellow");
+    }
+  }
 
   findClosestPlayer(enemy) {
 
@@ -360,7 +405,7 @@ export default class GameController {
   }
 
   async onCellEnter(index) {
- if(this.isLocked) return;
+    if(this.isLocked) return;
     if (this.gameState.gameOver) return;
 
     const positioned = this.positions.find(p => p.position === index);
@@ -403,6 +448,10 @@ export default class GameController {
 
         await this.changeTurn();
         this.stateService.save(this.gameState);
+        this.gameState.positions = this.positions;
+        this.gameState.selectedPosition = this.selectedCharacter?.position ?? null;
+        this.gameState.isLocked = this.isLocked;
+        this.gameState.isAttacking = this.isAttacking;
 
 
       } else {
@@ -414,7 +463,7 @@ export default class GameController {
 
 
   onCellLeave(index) {
-     if(this.isLocked) return;
+    if(this.isLocked) return;
     this.gamePlay.hideCellTooltip(index);
     this.gamePlay.deselectCell(index);
     if (this.selectedCharacter && this.selectedCharacter.position === index) {
@@ -437,6 +486,10 @@ export default class GameController {
 
     this.gameState.positions = this.positions;
     this.stateService.save(this.gameState);
+    this.gameState.positions = this.positions;
+    this.gameState.selectedPosition = this.selectedCharacter?.position ?? null;
+    this.gameState.isLocked = this.isLocked;
+    this.gameState.isAttacking = this.isAttacking;
     this.isLocked = true;
     GamePlay.showMessage("Игра сохранена");
   }
@@ -463,14 +516,11 @@ export default class GameController {
       return new PositionedCharacter(character, p.position);
     });
     this.gameState.positions = this.positions;
-    this.gamePlay.drawUi(themes[this.gameState.theme]);
+    this.gamePlay.drawUi(this.themes[this.gameState.theme]);
     this.gamePlay.redrawPositions(this.positions);
 
-
-    this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
-    this.gamePlay.addCellLeaveListener(this.onCellLeave.bind(this));
-    this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
     GamePlay.showMessage("Игра загружена");
 
   }
+  
 } 
